@@ -1,0 +1,113 @@
+// const { log } = require('winston');
+const {user,userLogin} =require( '../utils/arrayConfig.js')
+const {hashPassword,checkHashPass}  = require( '../utils/hashPassword.js');
+const crypto = require('crypto');
+const  sendVerificationEmail  = require('../utils/sendMail.js');
+const ApiError = require("../utils/ApiError.js");
+const ErrorMessageBase = require("../utils/ErrorMessageBase.js");
+const {checkAtive} = require("../utils/checkUser.js");
+const AuthModel= require("../model/AuthModel.js");
+ const tempUsers = new Map();
+class  AuthService {
+ 
+/*************  ✨ Windsurf Command 🌟  *************/
+  async registerUser(data) {
+    // const userdata={};
+    // user.forEach((item)=>{
+    //     if (data[item]) userdata[item] = data[item];
+    // })
+    // CHECK mail tồn tại hay chưa
+    const checkMail= await AuthModel.checkMail(data.email);
+    let errors = [];
+    if (checkMail.rowCount > 0) {
+        // return {error: "Email đã tồn tại"};
+         errors.push({
+                field: "email",
+                message: ErrorMessageBase.format(ErrorMessageBase.Existed, "Email" )
+            });
+    }
+    if(data.password.length<6 || data.password.length>20){
+        errors.push({
+            field: "password",
+            message: ErrorMessageBase.format(ErrorMessageBase.Range, { PropertyName: "Password" , MinLength: 6, MaxLength: 20 })
+        });
+    }
+     if (errors.length > 0) {
+            throw ApiError.ValidationError(errors);
+        }
+    const hash = await hashPassword(data.password);
+    data.password = hash;
+    const token=crypto.randomBytes(32).toString("hex"); // tạo mã token random
+    tempUsers.set( token,data);
+    await sendVerificationEmail(data.email, token,"AI Note Sumalize");
+    return {success: true ,message:"Vui lòng kiểm tra email để xác thực tài khoản"}
+    // return await this.userRepo.createUser(userdata);
+  }
+/*******  3bf4eeff-0b1c-442b-9234-2a7329984509  *******/
+  async loginUser(data){
+    // const userdata={};
+    // userLogin.forEach((item)=>{
+    //     if (data[item]) userdata[item] = data[item];
+    // })
+     const checkMail= await AuthModel.checkMail(data.email);
+    //  console.log("check", checkMail.rows[0]);
+     const errors = [];
+   if (checkMail.rows.length === 0) {
+        errors.push({
+            field: "email",
+            message: ErrorMessageBase.format(ErrorMessageBase.Incorrect, { PropertyName: "Email"} )
+        });
+        throw ApiError.ValidationError(errors);
+    }
+
+    const pass = await AuthModel.getpass(data.email);
+    const checkPass = await checkHashPass(String(data.password), pass.rows[0].password);
+
+    if (!checkPass) {
+        errors.push({
+            field: "password",
+            message: ErrorMessageBase.format(ErrorMessageBase.Incorrect, { PropertyName: "Password"} )
+        });
+        throw ApiError.ValidationError(errors);
+    }
+    const user = await AuthModel.selectUser(data.email);
+    await checkAtive(user.rows[0].id);
+    return user;
+  }
+
+   async verifiMail(data){
+    const token=data.token;
+    const temuser=tempUsers.get(token);
+    if(!temuser){
+      throw ApiError.Unauthorized();
+    }
+    await AuthModel.createUser(temuser);
+    tempUsers.delete(token);
+    return {message:"xác thực thành công"}
+}
+
+async saveRefreshToken(token, id) {
+  try {
+    return await AuthModel.saveRefreshToken(token, id);
+  } catch (error) {
+    return ApiError.BadRequest("Lưu refresh token thất bại");
+  }
+}
+
+async checkRefreshToken(id) {
+  try {
+    return await AuthModel.checkRefreshToken(id);
+  } catch (error) {
+    return ApiError.BadRequest("Kiểm tra refresh token thất bại");
+  }
+}
+async deleteRefreshToken(id) {
+  try {
+    return await AuthModel.deleteRefreshToken(id);
+  } catch (error) {
+    return ApiError.BadRequest("Xóa refresh token thất bại");
+  }
+}
+}
+    
+module.exports = new AuthService();
