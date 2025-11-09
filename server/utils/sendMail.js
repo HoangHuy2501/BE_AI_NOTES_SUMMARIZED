@@ -15,7 +15,7 @@ const sendVerificationEmail = async (toEmail, token, username) => {
 
   const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail({
     to: [{ email: toEmail }],
-    sender: { name: 'Hoang Huy', email: 'your_email@example.com' },
+    sender: { name: 'Hoang Huy', email: 'nhatnguyenhong45@gmail.com' },
     subject: 'Xác thực đăng ký tài khoản',
     htmlContent: `<h3>Chào bạn ${username}!</h3>
                   <p>Vui lòng xác thực tài khoản bằng cách nhấn vào link bên dưới:</p>

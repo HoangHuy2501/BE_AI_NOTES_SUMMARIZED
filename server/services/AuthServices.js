@@ -39,7 +39,8 @@ class  AuthService {
     data.password = hash;
     const token=crypto.randomBytes(32).toString("hex"); // tạo mã token random
     tempUsers.set( token,data);
-    await sendVerificationEmail(data.email, token,"AI Note Sumalize");
+    await sendVerificationEmail(data.email, token,"AI Note Sumalize").catch(err => {console.log("lỗi sendmail",err);
+    });
     return {success: true ,message:"Vui lòng kiểm tra email để xác thực tài khoản"}
     // return await this.userRepo.createUser(userdata);
   }

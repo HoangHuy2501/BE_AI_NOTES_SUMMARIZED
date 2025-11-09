@@ -35,7 +35,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 app.use(logger('dev'));
-
+// parse application/json
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 // Route health để ping server
@@ -44,9 +46,7 @@ app.get('/health', (req, res) => {
 });
 //đường dẫn auth
 app.use('/api/auth', authRouter);
-// parse application/json
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
 
 app.use(reponseHandler); 
 //dùng tất cả router bằng middleware
